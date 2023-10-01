@@ -211,6 +211,7 @@ foundid:
 		return -errno;
 	}
 	fi->fh = newid;
+	fi->direct_io = 1;
 
 	return 0;
 }
@@ -222,7 +223,7 @@ static int backupfs_write(const char *path, const char *data, size_t len,
 		return -EINVAL;
 	}
 	ssize_t ret = write(fds[fi->fh], data, len);
-	return ret;
+	return ret == -1 ? -errno : ret;
 }
 
 static int backupfs_flush(const char *path, struct fuse_file_info *fi) {
