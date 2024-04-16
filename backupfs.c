@@ -10,6 +10,8 @@
 
 #include <unistd.h>
 
+#define UNUSED(param) do { (void) param ; } while (0)
+
 /* I stole this code directly from hello.c */
 static struct options {
 	char *pattern;
@@ -56,7 +58,7 @@ static int genfd() {
 	time_t currtime = time(NULL);
 	struct tm *broken = localtime(&currtime);
 	char buff[1000];
-	int written = 0;
+	unsigned int written = 0;
 	const char *digstr = "0123456789";
 	const char *hexstr = "0123456789abcdef";
 
@@ -92,36 +94,36 @@ static int genfd() {
 		}
 		c = options.pattern[++i];
 		switch (c) {
-		case 'Y':
+		case 'Y':;
 			int year = broken->tm_year + 1900;
 			APPEND_NUM(year, 4);
 			break;
-		case 'M':
+		case 'M':;
 			int month = broken->tm_mon + 1;
 			APPEND_NUM(month, 2);
 			break;
-		case 'D':
+		case 'D':;
 			int day = broken->tm_mday;
 			APPEND_NUM(day, 2);
 			break;
-		case 'h':
+		case 'h':;
 			int hour = broken->tm_hour;
 			APPEND_NUM(hour, 2);
 			break;
-		case 'm':
+		case 'm':;
 			int min = broken->tm_min;
 			APPEND_NUM(min, 2);
 			break;
-		case 's':
+		case 's':;
 			int sec = broken->tm_sec;
 			APPEND_NUM(sec, 2);
 			break;
-		case 'u':
+		case 'u':;
 			unsigned char bytes[16];
-			if (read(randfd, bytes, sizeof bytes) < sizeof bytes) {
+			if (read(randfd, bytes, sizeof bytes) < ((ssize_t) sizeof bytes)) {
 				return -EAGAIN;
 			}
-			for (int p = 0; p < sizeof bytes; ++p) {
+			for (unsigned int p = 0; p < sizeof bytes; ++p) {
 				if (p == 4 || p == 6 || p == 8) {
 					APPEND('-');
 				}
@@ -166,6 +168,8 @@ static int backupfs_getattr(const char *path, struct stat *st) {
 
 static int backupfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		off_t offset, struct fuse_file_info *fi) {
+	UNUSED(offset);
+	UNUSED(fi);
 	fprintf(logs, "readdir(): %s\n", path);
 	if (strcmp(path, "/") != 0) {
 		return -ENOENT;
@@ -186,21 +190,21 @@ static int backupfs_open(const char *path, struct fuse_file_info *fi) {
 		return -EACCES;
 	}
 
-	long newid;
+	size_t newid;
 
 	for (newid = 0; newid < fdalloc; ++newid) {
 		if (fds[newid] == -1) {
 			goto foundid;
 		}
 	}
-	size_t newalloc = fdalloc;
+	size_t newalloc = fdalloc * 2;
 	int *newfds;
 	newfds = realloc(fds, newalloc * sizeof *fds);
 	if (newfds == NULL) {
 		return -EAGAIN;
 	}
 	newid = fdalloc;
-	for (long i = fdalloc; i < newalloc; ++i) {
+	for (size_t i = fdalloc; i < newalloc; ++i) {
 		newfds[i] = -1;
 	}
 	fds = newfds;
@@ -218,6 +222,7 @@ foundid:
 
 static int backupfs_write(const char *path, const char *data, size_t len,
 		off_t offset, struct fuse_file_info *fi) {
+	UNUSED(offset);
 	fprintf(logs, "write(): %s\n", path);
 	if (fi->fh >= fdalloc || fds[fi->fh] < 0) {
 		return -EINVAL;
@@ -237,6 +242,7 @@ static int backupfs_release(const char *path, struct fuse_file_info *fi) {
 }
 
 static int backupfs_truncate(const char *path, off_t newsz) {
+	UNUSED(newsz);
 	fprintf(logs, "truncate(): %s\n", path);
 	return 0;
 }
@@ -274,7 +280,7 @@ int main(int argc, char *argv[]) {
 
 	fdalloc = 10;
 	fds = malloc(fdalloc * sizeof *fds);
-	for (int i = 0; i < fdalloc; ++i) {
+	for (size_t i = 0; i < fdalloc; ++i) {
 		fds[i] = -1;
 	}
 

@@ -1,2 +1,2 @@
 backup: backupfs.c
-	$(CC) -Wall $< -o $@ $(shell pkg-config --libs --cflags fuse)
+	$(CC) $(CFLAGS) -Wall -Wpedantic -Wextra -Werror $< -o $@ $(shell pkg-config --libs --cflags fuse)
